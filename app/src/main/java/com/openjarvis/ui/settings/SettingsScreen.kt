@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -107,7 +108,8 @@ fun SettingsScreen(
                     onValueChange = { apiKey = it },
                     label = "API Key",
                     isFocused = false,
-                    isPassword = !showPassword,
+                    isPassword = true,
+                    showPassword = showPassword,
                     onTogglePassword = { showPassword = !showPassword }
                 )
                 
@@ -508,6 +510,7 @@ fun FloatingLabelTextField(
     isFocused: Boolean,
     isPassword: Boolean = false,
     visible: Boolean = true,
+    showPassword: Boolean = false,
     onTogglePassword: (() -> Unit)? = null
 ) {
     val labelOffset by animateFloatAsState(
