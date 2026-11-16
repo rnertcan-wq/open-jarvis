@@ -39,17 +39,13 @@ class SkillEngine(private val context: Context) {
     }
     
     private fun copyBuiltinSkillsIfNeeded() {
-        val builtinDir = File(context.assets, "skills")
-        if (!builtinDir.exists()) return
-        
-        builtinDir.listFiles()?.forEach { assetFile ->
-            val destFile = File(skillsDir, assetFile.name)
-            if (!destFile.exists()) {
+        val assetNames = context.assets.list("skills") ?: return
+        assetNames.forEach { assetName ->
+            val destination = File(skillsDir, assetName)
+            if (!destination.exists()) {
                 try {
-                    context.assets.open("skills/${assetFile.name}").use { input ->
-                        destFile.outputStream().use { output ->
-                            input.copyTo(output)
-                        }
+                    context.assets.open("skills/$assetName").use { input ->
+                        destination.outputStream().use { output -> input.copyTo(output) }
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -57,7 +53,7 @@ class SkillEngine(private val context: Context) {
             }
         }
     }
-    
+
     private fun parseSkill(json: JSONObject): Skill {
         val triggerPhrases = json.getJSONArray("triggerPhrases").let { arr ->
             (0 until arr.length()).map { arr.getString(it) }
@@ -252,6 +248,6 @@ data class Skill(
     val actionTemplate: List<Action>,
     val successVerification: String,
     val tags: List<String>,
-    val usageCount: Int,
-    val successRate: Float
+    val usageCount: Int = 0,
+    val successRate: Float = 1f
 )
