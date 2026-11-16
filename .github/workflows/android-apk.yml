@@ -1,6 +1,9 @@
 name: Open Jarvis Android APK
 
 on:
+  push:
+    branches:
+      - build/github-actions-apk
   workflow_dispatch:
 
 permissions:
