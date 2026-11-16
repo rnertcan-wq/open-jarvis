@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -89,6 +90,7 @@ fun SettingsScreen(
                     onToggle = { showProvidersDropdown = !showProvidersDropdown },
                     onSelect = { provider ->
                         selectedProvider = provider
+                        if (provider == "EVREN") model = "glm-5.3"
                         showProvidersDropdown = false
                     }
                 )
@@ -133,6 +135,7 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 TestConnectionButton(
+                    providerName = selectedProvider,
                     apiKey = apiKey,
                     baseUrl = baseUrl,
                     model = model,
@@ -452,6 +455,7 @@ private fun ProviderDot(provider: String) {
         "OpenRouter" to VoidColor.Green,
         "Anthropic Claude" to VoidColor.Amber,
         "OpenAI" to VoidColor.Green,
+        "EVREN" to VoidColor.Cyan,
         "Ollama (Local)" to VoidColor.Cyan,
         "Custom" to VoidColor.Violet
     )
@@ -578,12 +582,15 @@ fun FloatingLabelTextField(
 
 @Composable
 private fun TestConnectionButton(
+    providerName: String,
     apiKey: String,
     baseUrl: String,
     model: String,
     onSave: (String, String, String, String) -> Unit
 ) {
     var testState by remember { mutableStateOf<TestState>(TestState.Idle) }
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     
     val borderColor by animateColorAsState(
         targetValue = when (testState) {
@@ -605,8 +612,14 @@ private fun TestConnectionButton(
     
     OutlinedButton(
         onClick = {
-            onSave("Groq", baseUrl, apiKey, model)
-            testState = TestState.Success(150)
+            onSave(providerName, baseUrl, apiKey, model)
+            testState = TestState.Loading
+            coroutineScope.launch {
+                testState = UniversalAdapter(context).testConnection().fold(
+                    onSuccess = { TestState.Success(it) },
+                    onFailure = { TestState.Error(it.message ?: "Connection failed") }
+                )
+            }
         },
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -628,7 +641,7 @@ private fun TestConnectionButton(
                 Text("Connected — ${state.ms}ms")
             }
             is TestState.Error -> {
-                Text("Failed — check key")
+                Text("Failed — ${state.message}")
             }
         }
     }
