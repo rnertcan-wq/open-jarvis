@@ -43,6 +43,25 @@ class GraphifyRepository(context: Context) {
         )
     }
 
+    suspend fun logProviderFailure(providerName: String, error: String) = withContext(Dispatchers.IO) {
+        val existing = providerNodeDao.getByName(providerName)
+        if (existing == null) {
+            providerNodeDao.insert(
+                ProviderNode(
+                    providerName = providerName,
+                    modelName = error.take(120),
+                    useCount = 1,
+                    successCount = 0
+                )
+            )
+        } else {
+            providerNodeDao.update(existing.copy(
+                useCount = existing.useCount + 1,
+                modelName = error.take(120)
+            ))
+        }
+    }
+
     suspend fun getRecentApps(limit: Int = 10): List<AppNode> = withContext(Dispatchers.IO) {
         appNodeDao.getRecentApps(limit)
     }
