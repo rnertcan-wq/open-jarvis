@@ -27,6 +27,7 @@ class UniversalAdapter(private val context: Context) {
         val model = prefs.getString("provider_model", "") ?: ""
         
         return when (name) {
+            "EVREN" -> CustomProvider("https://evren-llmapi.ssyz.org.tr/v1", apiKey, model.ifBlank { "glm-5.3" })
             "Groq" -> GroqProvider(apiKey, model)
             "Google Gemini", "gemini" -> GeminiProvider(apiKey, model)
             "OpenRouter" -> OpenRouterProvider(apiKey, model)
@@ -71,8 +72,10 @@ class UniversalAdapter(private val context: Context) {
             "OpenRouter",
             "Anthropic Claude",
             "OpenAI",
+            "EVREN",
             "Ollama (Local)",
-            "Local (LlamaCpp)"
+            "Local (LlamaCpp)",
+            "Custom"
         )
         
         fun getModelManager(context: Context): ModelManager {
