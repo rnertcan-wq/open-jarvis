@@ -1,1 +1,1 @@
-Build Fırsat Avcısı APK from the source archive.
+Rebuild Fırsat Avcısı after Android SDK workflow fix.
