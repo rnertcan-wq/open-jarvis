@@ -1,1 +1,1 @@
-Build attempt after removing obsolete SDK tools setup.
+Build after updating Android SDK setup action to v4.
