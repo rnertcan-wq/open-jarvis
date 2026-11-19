@@ -1,1 +1,1 @@
-Build after updating Android SDK setup action to v4.
+Rebuild Fırsat Avcısı with sleep schedule and full-screen alarm.
