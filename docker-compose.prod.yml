@@ -1,0 +1,67 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: jarvis-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: jarvis_ai
+      POSTGRES_USER: jarvis
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+    volumes:
+      - jarvis_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jarvis -d jarvis_ai"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [jarvis-internal]
+
+  redis:
+    image: redis:7-alpine
+    container_name: jarvis-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
+    volumes:
+      - jarvis_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [jarvis-internal]
+
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: jarvis-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      DATABASE_URL: postgres://jarvis:${POSTGRES_PASSWORD}@postgres:5432/jarvis_ai
+      REDIS_URL: redis://redis:6379
+      CORS_ORIGIN: "*"
+    ports:
+      - "127.0.0.1:18080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks: [jarvis-internal]
+
+volumes:
+  jarvis_pgdata:
+  jarvis_redisdata:
+
+networks:
+  jarvis-internal:
+    driver: bridge
