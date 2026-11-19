@@ -21,15 +21,17 @@ jobs:
           cat jarvis-ai-source/part1.b64 jarvis-ai-source/part2.b64 jarvis-ai-source/part3.b64 jarvis-ai-source/part4.b64 jarvis-ai-source/part4b.b64 jarvis-ai-source/part5.b64 | base64 -d > /tmp/source.tar.gz
           mkdir extracted
           tar -xzf /tmp/source.tar.gz -C extracted
-      - name: Create source inventory
+      - name: Capture editable Flutter sources
+        shell: bash
         run: |
-          find extracted -type f | sort > source-files.txt
-          grep -RInE 'API.?key|provider|conversation|history|attachment|image_picker|file_picker|plus' extracted --include='*.dart' > source-hits.txt || true
+          find extracted/jarvis_ai/app/lib -type f -maxdepth 5 -print
+          mkdir -p inspection
+          cp -R extracted/jarvis_ai/app/lib inspection/lib
+          cp extracted/jarvis_ai/app/pubspec.yaml inspection/pubspec.yaml
+          cp extracted/jarvis_ai/app/android/app/src/main/AndroidManifest.xml inspection/AndroidManifest.xml
+          grep -RInE 'API.?key|provider|conversation|history|attachment|image_picker|file_picker|plus' inspection/lib --include='*.dart' > inspection/source-hits.txt || true
       - uses: actions/upload-artifact@v4
         with:
-          name: jarvis-source-inspection
-          path: |
-            source-files.txt
-            source-hits.txt
-            extracted/jarvis_ai/lib/**
+          name: jarvis-source-code
+          path: inspection/
           retention-days: 3
