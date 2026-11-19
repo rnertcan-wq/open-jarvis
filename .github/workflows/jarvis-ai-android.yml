@@ -6,6 +6,7 @@ on:
       - jarvis-ai-apk
     paths:
       - 'jarvis-ai-source/**'
+      - 'jarvis-patches/**'
       - '.github/workflows/jarvis-ai-android.yml'
   workflow_dispatch:
 
@@ -56,6 +57,12 @@ jobs:
           mkdir -p build-source
           tar -xzf /tmp/jarvis-ai-source.tar.gz -C build-source
 
+      - name: Apply JARVIS 0.2.0 feature patch
+        shell: bash
+        run: |
+          cp -R jarvis-patches/lib/. build-source/jarvis_ai/app/lib/
+          cp jarvis-patches/pubspec.yaml build-source/jarvis_ai/app/pubspec.yaml
+
       - name: Resolve Flutter dependencies and build APK
         working-directory: build-source/jarvis_ai
         run: |
@@ -83,7 +90,7 @@ jobs:
             --ks-key-alias jarvis-ai \
             --ks-pass pass:jarvis-temp-store-pass \
             --key-pass pass:jarvis-temp-store-pass \
-            --out "$APK_DIR/JARVIS-AI-0.1.0-signed.apk" \
+            --out "$APK_DIR/JARVIS-AI-0.2.0-signed.apk" \
             "$RUNNER_TEMP/app-release-aligned.apk"
           "$BUILD_TOOLS/apksigner" verify --verbose \
             "$APK_DIR/JARVIS-AI-0.1.0-signed.apk"
