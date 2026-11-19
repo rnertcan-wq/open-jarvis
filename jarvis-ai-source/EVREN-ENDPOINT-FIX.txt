@@ -1,0 +1,2 @@
+Correct EVREN endpoint: https://evren-llmapi.ssyz.org.tr/v1
+Use relative models and chat/completions paths under /v1.
