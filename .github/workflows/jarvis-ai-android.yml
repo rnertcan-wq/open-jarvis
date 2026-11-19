@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build Android release APK
+    name: Build and sign Android release APK
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -36,6 +36,11 @@ jobs:
         with:
           flutter-version: '3.35.7'
           cache: true
+
+      - name: Install Android signing tools
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'build-tools;35.0.0'
 
       - name: Restore JARVIS AI source archive
         shell: bash
@@ -57,10 +62,36 @@ jobs:
           chmod +x scripts/build-android.sh
           ./scripts/build-android.sh
 
-      - name: Upload release APK
+      - name: Align and sign release APK
+        shell: bash
+        working-directory: build-source/jarvis_ai
+        run: |
+          set -euo pipefail
+          APK_DIR="app/build/app/outputs/flutter-apk"
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/35.0.0"
+          keytool -genkeypair -v \
+            -keystore "$RUNNER_TEMP/jarvis-ai-release.jks" \
+            -storepass jarvis-temp-store-pass \
+            -keypass jarvis-temp-key-pass \
+            -alias jarvis-ai \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=JARVIS AI, OU=Mobile, O=JARVIS AI, C=TR"
+          "$BUILD_TOOLS/zipalign" -f 4 \
+            "$APK_DIR/app-release.apk" "$RUNNER_TEMP/app-release-aligned.apk"
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks "$RUNNER_TEMP/jarvis-ai-release.jks" \
+            --ks-key-alias jarvis-ai \
+            --ks-pass pass:jarvis-temp-store-pass \
+            --key-pass pass:jarvis-temp-key-pass \
+            --out "$APK_DIR/JARVIS-AI-0.1.0-signed.apk" \
+            "$RUNNER_TEMP/app-release-aligned.apk"
+          "$BUILD_TOOLS/apksigner" verify --verbose \
+            "$APK_DIR/JARVIS-AI-0.1.0-signed.apk"
+
+      - name: Upload signed installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: jarvis-ai-android-apk
-          path: build-source/jarvis_ai/app/build/app/outputs/flutter-apk/app-release.apk
+          name: jarvis-ai-android-apk-signed
+          path: build-source/jarvis_ai/app/build/app/outputs/flutter-apk/JARVIS-AI-0.1.0-signed.apk
           if-no-files-found: error
           retention-days: 14
