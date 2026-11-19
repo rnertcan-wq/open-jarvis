@@ -25,5 +25,5 @@ class _SettingsScreenState extends State<SettingsScreen>{
  ]))),
  const SizedBox(height:14),Card(child:ListTile(leading:const Icon(Icons.psychology_alt_outlined,color:AppTheme.cyan),title:const Text('Kalıcı hafıza'),subtitle:const Text('Kayıtları görüntüle ve düzenle'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>MemoryScreen(api:widget.api))))),
  const SizedBox(height:12),Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:AppTheme.panel,borderRadius:BorderRadius.circular(16)),child:Text(status,style:const TextStyle(color:Colors.white70,fontSize:12))),
- ]);}
+ ]);
 }
