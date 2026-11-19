@@ -1,4 +1,4 @@
-name: Build M.G Wp Avci APK
+﻿name: Build M.G Wp Avci APK
 
 on:
   push:
@@ -49,13 +49,13 @@ jobs:
       - name: Rename APK
         working-directory: android
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk "MG-Wp-Avci-1.2.0-debug.apk"
-          ls -lh "MG-Wp-Avci-1.2.0-debug.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "MG-Wp-Avci-1.2.1-debug.apk"
+          ls -lh "MG-Wp-Avci-1.2.1-debug.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MG-Wp-Avci-1.2.0-debug-apk
-          path: android/MG-Wp-Avci-1.2.0-debug.apk
+          name: MG-Wp-Avci-1.2.1-debug-apk
+          path: android/MG-Wp-Avci-1.2.1-debug.apk
           if-no-files-found: error
           retention-days: 30

@@ -92,10 +92,12 @@ import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationManagerCompat
 import com.firsatavcisi.app.alert.AlertService
 import com.firsatavcisi.app.alert.DealQueue
+import com.firsatavcisi.app.alert.DndHelper
 import com.firsatavcisi.app.alert.SleepSchedule
 import com.firsatavcisi.app.data.Deal
 import com.firsatavcisi.app.data.DealStore
 import com.firsatavcisi.app.data.Settings
+import com.firsatavcisi.app.data.Settings.AlarmMode
 import com.firsatavcisi.app.notifications.NotificationHelper
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -175,6 +177,8 @@ private fun FirsatAvcisiApp(
     var ttsAlways by remember { mutableStateOf(Settings.ttsAlways(context)) }
     var ocrEnabled by remember { mutableStateOf(Settings.ocrEnabled(context)) }
     var vibration by remember { mutableStateOf(Settings.vibration(context)) }
+    var alarmMode by remember { mutableStateOf(Settings.alarmMode(context)) }
+    var dndBypass by remember { mutableStateOf(Settings.dndBypass(context)) }
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -299,6 +303,41 @@ private fun FirsatAvcisiApp(
                     ttsAlways = ttsAlways,
                     ocrEnabled = ocrEnabled,
                     vibration = vibration,
+                    alarmMode = alarmMode,
+                    dndBypass = dndBypass,
+                    dndAccessGranted = DndHelper.isAccessGranted(context),
+                    dndActive = DndHelper.isActive(context),
+                    onAlarmModeChange = {
+                        alarmMode = it
+                        Settings.setAlarmMode(context, it)
+                    },
+                    onDndBypassChange = {
+                        dndBypass = it
+                        Settings.setDndBypass(context, it)
+                    },
+                    onOpenDndSettings = {
+                        runCatching { context.startActivity(Intent(AndroidSettings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) }
+                    },
+                    onTestAlarm = {
+                        runCatching {
+                            AlertService.start(
+                                context,
+                                Deal(
+                                    id = "test-${System.currentTimeMillis()}",
+                                    productName = "Test fırsatı",
+                                    currentPrice = 28.0,
+                                    oldPrice = 999.0,
+                                    discountPercent = 97.0,
+                                    url = null,
+                                    rawMessage = "test",
+                                    groupName = "Test",
+                                    createdAt = System.currentTimeMillis(),
+                                    priority = 2
+                                )
+                            )
+                        }
+                        Toast.makeText(context, "Test alarmı: ${Settings.AlarmMode.label(Settings.alarmMode(context))}", Toast.LENGTH_SHORT).show()
+                    },
                     onMinDiscountChange = {
                         minDiscount = it.filter(Char::isDigit).take(3)
                         minDiscount.toFloatOrNull()?.let { value -> Settings.setNumber(context, Settings.K_MIN_DISCOUNT, value.coerceIn(1f, 100f)) }
@@ -480,8 +519,10 @@ private fun HomeScreen(
                 }
                 Text(
                     buildString {
-                        append("Alarm süresi: ")
-                        append(if (alarmSeconds <= 0) "kapatılana kadar" else "$alarmSeconds saniye")
+                        append("Alarm: ")
+                        append(Settings.AlarmMode.label(Settings.alarmMode(context)))
+                        append(" · Süre: ")
+                        append(if (alarmSeconds <= 0) "kapatılana kadar" else "$alarmSeconds sn")
                         append(" · İzlenen: ")
                         append(if (groups.isEmpty()) "tüm sohbetler" else groups.joinToString(", "))
                         append(" · Okunan olay: $eventCount")
@@ -652,6 +693,10 @@ private fun SettingsScreen(
     ttsAlways: Boolean,
     ocrEnabled: Boolean,
     vibration: Boolean,
+    alarmMode: Int,
+    dndBypass: Boolean,
+    dndAccessGranted: Boolean,
+    dndActive: Boolean,
     onMinDiscountChange: (String) -> Unit,
     onCheapPriceChange: (String) -> Unit,
     onCheapDiscountChange: (String) -> Unit,
@@ -661,6 +706,10 @@ private fun SettingsScreen(
     onTtsAlwaysChange: (Boolean) -> Unit,
     onOcrChange: (Boolean) -> Unit,
     onVibrationChange: (Boolean) -> Unit,
+    onAlarmModeChange: (Int) -> Unit,
+    onDndBypassChange: (Boolean) -> Unit,
+    onOpenDndSettings: () -> Unit,
+    onTestAlarm: () -> Unit,
     onSleepEnabledChange: (Boolean) -> Unit,
     onSleepStartChange: (String) -> Unit,
     onSleepEndChange: (String) -> Unit,
@@ -739,10 +788,38 @@ private fun SettingsScreen(
         Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp)) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
                 Text("Alarm davranışı", fontWeight = FontWeight.Bold)
+                Text("Alarm nasıl uyarsın?", color = Muted, fontSize = 12.sp)
+                AlarmMode.all.forEach { mode ->
+                    val selected = alarmMode == mode
+                    Surface(
+                        color = if (selected) Mint.copy(alpha = 0.16f) else PanelLight,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().clickable { onAlarmModeChange(mode) }
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 13.dp, vertical = 11.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                Modifier.size(16.dp)
+                                    .background(if (selected) Mint else Color.Transparent, CircleShape)
+                            )
+                            Spacer(Modifier.width(11.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(AlarmMode.label(mode), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = if (selected) Mint else Color.White)
+                                Text(AlarmMode.description(mode), color = Muted, fontSize = 11.sp, lineHeight = 15.sp)
+                            }
+                        }
+                    }
+                }
+                OutlinedButton(onClick = onTestAlarm, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+                    Text("Alarmı şimdi dene")
+                }
+                Divider(color = Color.White.copy(alpha = 0.08f))
                 NumberField("Alarm süresi (saniye, 0 = süresiz)", alarmSeconds, onAlarmSecondsChange, Modifier.fillMaxWidth())
                 ToggleRow("Ses seviyesini yükselt", "Alarm çalarken ses seviyesi düşükse geçici olarak yükseltilir.", forceVolume, onForceVolumeChange)
                 Divider(color = Color.White.copy(alpha = 0.08f))
-                ToggleRow("Titreşim", "Alarm sırasında titreşim çalışsın.", vibration, onVibrationChange)
+                ToggleRow("Titreşim", "Ses + titreşim modunda titreşim çalışsın.", vibration, onVibrationChange)
                 Divider(color = Color.White.copy(alpha = 0.08f))
                 ToggleRow("Her zaman sesli anons", "Kapalıysa anons yalnızca Bluetooth bağlıyken okunur.", ttsAlways, onTtsAlwaysChange)
                 Divider(color = Color.White.copy(alpha = 0.08f))
@@ -754,6 +831,49 @@ private fun SettingsScreen(
                         Text(if (voiceEnabled) "Açık" else "Kapalı", color = if (voiceEnabled) Mint else Muted, fontSize = 12.sp)
                     }
                     Switch(checked = voiceEnabled, onCheckedChange = onVoiceChange)
+                }
+            }
+        }
+
+        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp)) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Rahatsız Etme (DND) aşma", fontWeight = FontWeight.Bold)
+                        Text(
+                            "Telefon Rahatsız Etme modundayken de alarmın sesi/titreşimi çalışsın. Bunun için Android'den Rahatsız Etme erişimi vermen gerekir.",
+                            color = Muted, fontSize = 12.sp, lineHeight = 17.sp
+                        )
+                    }
+                    Switch(checked = dndBypass, onCheckedChange = onDndBypassChange)
+                }
+                Surface(
+                    color = when {
+                        !dndAccessGranted -> Amber.copy(alpha = 0.14f)
+                        dndActive -> Mint.copy(alpha = 0.14f)
+                        else -> PanelLight
+                    },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        when {
+                            !dndAccessGranted -> "Rahatsız Etme erişimi verilmedi. İzin verilmezse alarm DND sırasında sessiz kalır."
+                            dndActive -> "Rahatsız Etme şu anda açık · alarm çalarken geçici olarak kaldırılacak, sonra geri açılacak."
+                            else -> "Rahatsız Etme erişimi verildi · şu anda DND kapalı."
+                        },
+                        color = when {
+                            !dndAccessGranted -> Amber
+                            dndActive -> Mint
+                            else -> Muted
+                        },
+                        fontSize = 12.sp,
+                        modifier = Modifier.fillMaxWidth().padding(11.dp)
+                    )
+                }
+                if (!dndAccessGranted) {
+                    OutlinedButton(onClick = onOpenDndSettings, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+                        Text("Rahatsız Etme erişimini aç")
+                    }
                 }
             }
         }

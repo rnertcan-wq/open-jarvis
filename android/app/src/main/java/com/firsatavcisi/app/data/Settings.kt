@@ -20,6 +20,35 @@ object Settings {
     private const val KEY_TTS_ALWAYS = "tts_always"
     private const val KEY_OCR = "ocr_enabled"
     private const val KEY_VIBRATION = "vibration"
+    private const val KEY_ALARM_MODE = "alarm_mode"
+    private const val KEY_DND_BYPASS = "dnd_bypass"
+
+    /**
+     * Alarm cikis modu.
+     * Rahatsiz Etme (DND) kapisi ayri bir ayardir: [dndBypass].
+     */
+    object AlarmMode {
+        const val SOUND_AND_VIBRATION = 0
+        const val VIBRATION_ONLY = 1
+        const val SOUND_ONLY = 2
+        const val SILENT = 3
+
+        fun label(value: Int): String = when (value) {
+            VIBRATION_ONLY -> "Sadece titreşim"
+            SOUND_ONLY -> "Sadece ses"
+            SILENT -> "Sessiz (ekran + bildirim)"
+            else -> "Ses + titreşim"
+        }
+
+        fun description(value: Int): String = when (value) {
+            VIBRATION_ONLY -> "Ses çalmaz, telefon titrer ve tam ekran uyarı açılır."
+            SOUND_ONLY -> "Alarm sesi çalar, titreşim olmaz."
+            SILENT -> "Ne ses ne titreşim. Ekran ve bildirim görünür."
+            else -> "Alarm sesi ve titreşim birlikte çalışır."
+        }
+
+        val all: List<Int> = listOf(SOUND_AND_VIBRATION, VIBRATION_ONLY, SOUND_ONLY, SILENT)
+    }
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -78,6 +107,31 @@ object Settings {
 
     fun vibration(context: Context): Boolean = prefs(context).getBoolean(KEY_VIBRATION, true)
 
+    /** 0 = ses + titresim, 1 = sadece titresim, 2 = sadece ses, 3 = sessiz. */
+    fun alarmMode(context: Context): Int = prefs(context).getInt(KEY_ALARM_MODE, AlarmMode.SOUND_AND_VIBRATION)
+
+    fun setAlarmMode(context: Context, value: Int) {
+        prefs(context).edit().putInt(KEY_ALARM_MODE, value.coerceIn(0, 3)).apply()
+    }
+
+    fun alarmWantsSound(context: Context): Boolean {
+        val mode = alarmMode(context)
+        return mode == AlarmMode.SOUND_AND_VIBRATION || mode == AlarmMode.SOUND_ONLY
+    }
+
+    fun alarmWantsVibration(context: Context): Boolean {
+        val mode = alarmMode(context)
+        return vibration(context) &&
+            (mode == AlarmMode.SOUND_AND_VIBRATION || mode == AlarmMode.VIBRATION_ONLY)
+    }
+
+    /** Rahatsiz Etme (DND) acikken alarm yine de calssin mi. Izin gerektirir. */
+    fun dndBypass(context: Context): Boolean = prefs(context).getBoolean(KEY_DND_BYPASS, false)
+
+    fun setDndBypass(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_DND_BYPASS, value).apply()
+    }
+
     fun rules(context: Context) = DealParser.Rules(
         minDiscount = minDiscount(context),
         cheapPrice = cheapPrice(context),
@@ -107,5 +161,7 @@ object Settings {
     const val K_TTS_ALWAYS = KEY_TTS_ALWAYS
     const val K_OCR = KEY_OCR
     const val K_VIBRATION = KEY_VIBRATION
+    const val K_ALARM_MODE = KEY_ALARM_MODE
+    const val K_DND_BYPASS = KEY_DND_BYPASS
     const val K_CHEAP_WITHOUT_DISCOUNT = KEY_CHEAP_WITHOUT_DISCOUNT
 }

@@ -40,6 +40,7 @@ class AlertService : Service() {
     private var currentDeal: Deal? = null
     private var previousVolume = -1
     private var volumeChanged = false
+    private var dndSuspendedFilter = -1
     private val handler = Handler(Looper.getMainLooper())
     private val stopRunnable = Runnable { stopCurrentAlarm(next = true) }
 
@@ -98,10 +99,18 @@ class AlertService : Service() {
         showForeground(deal)
         NotificationHelper.showAlarm(this, deal)
 
-        boostVolume()
-        startRinging()
-        if (Settings.vibration(this)) startVibration()
-        speakDeal(deal)
+        // DND aciksa ve kullanici izin verdiyse alarm suresince gecici olarak kaldir.
+        val wantsAudible = Settings.alarmWantsSound(this) || Settings.alarmWantsVibration(this)
+        if (wantsAudible && Settings.dndBypass(this) && dndSuspendedFilter < 0) {
+            dndSuspendedFilter = DndHelper.suspend(this)
+        }
+
+        if (Settings.alarmWantsSound(this)) {
+            boostVolume()
+            startRinging()
+        }
+        if (Settings.alarmWantsVibration(this)) startVibration()
+        if (Settings.alarmWantsSound(this)) speakDeal(deal)
 
         val seconds = Settings.alarmSeconds(this)
         handler.removeCallbacks(stopRunnable)
@@ -140,9 +149,16 @@ class AlertService : Service() {
         currentDeal = null
         NotificationHelper.cancelAlarm(this)
         restoreVolume()
+        restoreDnd()
         NotificationHelper.broadcastAlarmStopped(this)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+    }
+
+    private fun restoreDnd() {
+        if (dndSuspendedFilter < 0) return
+        DndHelper.restore(this, dndSuspendedFilter)
+        dndSuspendedFilter = -1
     }
 
     private fun boostVolume() {
@@ -243,6 +259,7 @@ class AlertService : Service() {
         runCatching { vibrator?.cancel() }
         runCatching { tts?.stop(); tts?.shutdown() }
         restoreVolume()
+        restoreDnd()
         detach(this)
         super.onDestroy()
     }
