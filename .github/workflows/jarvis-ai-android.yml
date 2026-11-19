@@ -72,7 +72,7 @@ jobs:
           keytool -genkeypair -v \
             -keystore "$RUNNER_TEMP/jarvis-ai-release.jks" \
             -storepass jarvis-temp-store-pass \
-            -keypass jarvis-temp-key-pass \
+            -keypass jarvis-temp-store-pass \
             -alias jarvis-ai \
             -keyalg RSA -keysize 2048 -validity 10000 \
             -dname "CN=JARVIS AI, OU=Mobile, O=JARVIS AI, C=TR"
@@ -82,7 +82,7 @@ jobs:
             --ks "$RUNNER_TEMP/jarvis-ai-release.jks" \
             --ks-key-alias jarvis-ai \
             --ks-pass pass:jarvis-temp-store-pass \
-            --key-pass pass:jarvis-temp-key-pass \
+            --key-pass pass:jarvis-temp-store-pass \
             --out "$APK_DIR/JARVIS-AI-0.1.0-signed.apk" \
             "$RUNNER_TEMP/app-release-aligned.apk"
           "$BUILD_TOOLS/apksigner" verify --verbose \
