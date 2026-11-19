@@ -93,12 +93,12 @@ jobs:
             --out "$APK_DIR/JARVIS-AI-0.2.0-signed.apk" \
             "$RUNNER_TEMP/app-release-aligned.apk"
           "$BUILD_TOOLS/apksigner" verify --verbose \
-            "$APK_DIR/JARVIS-AI-0.1.0-signed.apk"
+            "$APK_DIR/JARVIS-AI-0.2.0-signed.apk"
 
       - name: Upload signed installable APK
         uses: actions/upload-artifact@v4
         with:
           name: jarvis-ai-android-apk-signed
-          path: build-source/jarvis_ai/app/build/app/outputs/flutter-apk/JARVIS-AI-0.1.0-signed.apk
+          path: build-source/jarvis_ai/app/build/app/outputs/flutter-apk/JARVIS-AI-0.2.0-signed.apk
           if-no-files-found: error
           retention-days: 14
