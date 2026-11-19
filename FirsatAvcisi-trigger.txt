@@ -1,1 +1,1 @@
-Rebuild Fırsat Avcısı with sleep schedule and full-screen alarm.
+Second build attempt for Fırsat Avcısı 1.1.0.
