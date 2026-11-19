@@ -6,6 +6,7 @@ on:
       - firsat-avcisi
     paths:
       - 'FirsatAvcisi-source.tar.xz.part5'
+      - 'FirsatAvcisi-trigger.txt'
   workflow_dispatch:
 
 permissions:
